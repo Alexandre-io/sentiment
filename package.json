@@ -20,10 +20,11 @@
     "test": "make test"
   },
   "devDependencies": {
-    "async": "^2.1.5",
     "Sentimental": "1.0.1",
+    "async": "^2.3.0",
     "benchmark": "^2.1.0",
     "eslint": "^3.2.1",
+    "google-translate-api": "^2.2.2",
     "tap": "^10.1.0"
   },
   "engines": {
