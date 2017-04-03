@@ -1,6 +1,7 @@
 var async = require('async');
 var fs = require('fs');
 var path = require('path');
+var translate = require('google-translate-api');
 
 // File paths
 var AFINN_PATH = path.resolve(__dirname, 'AFINN-en-165.txt');
@@ -26,8 +27,8 @@ function processEmoji(hash, callback) {
             var line = data[i].split(',');
 
             // Validate line
-            if (i == 0) continue;               // Label
-            if (line.length !== 9) continue;    // Invalid
+            if (i == 0) continue; // Label
+            if (line.length !== 9) continue; // Invalid
 
             // Establish sentiment value
             var emoji = String.fromCodePoint(line[1]);
@@ -79,6 +80,43 @@ function processAFINN(hash, callback) {
 }
 
 /**
+ * Read AFINN data from original format (TSV).
+ * @param  {object}   hash     Result hash
+ * @param  {Function} callback Callback
+ * @return {void}
+ */
+function processAFINNFR(hash, callback) {
+    // Read file
+    fs.readFile(AFINN_PATH, 'utf8', function (err, data) {
+        if (err) return callback(err);
+
+        // Split data by new line
+        data = data.split(/\n/);
+
+        // Iterate over dataset and add to hash
+        async.eachSeries(data, function iteratee(line, cb) {
+            var item = line.split(/\t/);
+
+            // Validate line
+            if (item[0] === '') return cb();
+
+            // Translate from en to fr
+            translate(item[0], {
+                from: 'en',
+                to: 'fr'
+            }).then(function (res) {
+                hash[res.text.toLowerCase()] = Number(item[1]);
+                return cb();
+            }).catch(function () {
+                return cb();
+            });
+        }, function done() {
+            return callback(null, hash);
+        });
+    });
+}
+
+/**
  * Write sentiment score hash to disk.
  * @param  {object}   hash     Result hash
  * @param  {Function} callback Callback
@@ -99,8 +137,9 @@ async.waterfall([
     },
     processEmoji,
     processAFINN,
+    processAFINNFR,
     finish
-], function(err, result) {
+], function (err, result) {
     if (err) throw new Error(err);
     process.stderr.write(
         'Complete: ' +
